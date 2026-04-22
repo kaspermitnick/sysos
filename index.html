@@ -1,0 +1,1141 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>S.A Sys - Ordens de Serviço</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Nunito', sans-serif;
+    background: #f0f2f5;
+    min-height: 100vh;
+  }
+  
+  /* Login */
+  .login-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+  .login-card {
+    background: white;
+    padding: 40px;
+    border-radius: 20px;
+    width: 90%;
+    max-width: 400px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    text-align: center;
+  }
+  .login-card h2 { color: #4361ee; margin-bottom: 10px; }
+  .login-card input {
+    width: 100%;
+    padding: 12px 16px;
+    margin: 10px 0;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+  }
+  .login-card button {
+    width: 100%;
+    padding: 12px;
+    background: #4361ee;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-top: 10px;
+  }
+  .login-card button:hover { background: #3451d1; }
+  .error-msg { color: red; margin-top: 10px; font-size: 13px; }
+  .demo-info {
+    margin-top: 20px;
+    font-size: 12px;
+    color: #666;
+    text-align: left;
+    background: #f5f5f5;
+    padding: 10px;
+    border-radius: 8px;
+  }
+  
+  /* App principal */
+  #app {
+    display: none;
+  }
+  .sidebar {
+    width: 250px;
+    background: #1a1a2e;
+    color: white;
+    position: fixed;
+    height: 100vh;
+    padding: 20px;
+    overflow-y: auto;
+    z-index: 100;
+  }
+  .sidebar h2 { margin-bottom: 30px; font-size: 20px; }
+  .sidebar nav a {
+    display: block;
+    padding: 12px 15px;
+    color: #ccc;
+    text-decoration: none;
+    border-radius: 8px;
+    margin-bottom: 5px;
+    cursor: pointer;
+  }
+  .sidebar nav a:hover, .sidebar nav a.active {
+    background: #4361ee;
+    color: white;
+  }
+  .main-content {
+    margin-left: 250px;
+    padding: 20px;
+  }
+  .logout-btn {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    right: 20px;
+    background: #e63946;
+    color: white;
+    border: none;
+    padding: 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+  }
+  
+  /* Cards */
+  .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+  }
+  .card {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  }
+  .card h3 { font-size: 13px; color: #666; margin-bottom: 10px; }
+  .card .value { font-size: 28px; font-weight: bold; color: #4361ee; }
+  
+  /* Gráficos */
+  .charts-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 30px;
+  }
+  .chart-card {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  }
+  .chart-card h3 {
+    margin-bottom: 15px;
+    color: #333;
+  }
+  canvas {
+    max-height: 300px;
+    width: 100%;
+  }
+  
+  /* Calendário */
+  .calendar-container {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  }
+  .fc {
+    font-family: 'Nunito', sans-serif;
+  }
+  .fc-event {
+    cursor: pointer;
+    border: none;
+    padding: 4px 8px;
+    font-size: 12px;
+    border-radius: 6px;
+  }
+  .fc-event-pendente { background-color: #f39c12; }
+  .fc-event-em-progresso { background-color: #3498db; }
+  .fc-event-concluido { background-color: #2ecc71; }
+  .fc-event-cancelado { background-color: #e74c3c; }
+  
+  /* Tabelas */
+  .table-container {
+    background: white;
+    border-radius: 12px;
+    overflow-x: auto;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  th, td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+  }
+  th {
+    background: #f8f9fa;
+    font-weight: 700;
+    color: #555;
+  }
+  .badge {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: bold;
+  }
+  .badge-success { background: #d4edda; color: #155724; }
+  .badge-warning { background: #fff3cd; color: #856404; }
+  .badge-danger { background: #f8d7da; color: #721c24; }
+  .badge-info { background: #d1ecf1; color: #0c5460; }
+  
+  button {
+    background: #4361ee;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  button.secondary { background: #6c757d; }
+  button.danger { background: #e63946; }
+  .action-btn {
+    background: none;
+    padding: 4px 8px;
+    margin: 0 2px;
+  }
+  .action-btn.edit { color: #4361ee; background: none; }
+  .action-btn.delete { color: #e63946; background: none; }
+  
+  /* Anexos */
+  .anexos-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .anexo-item {
+    background: #f0f2f5;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .anexo-item a { color: #4361ee; text-decoration: none; }
+  .remove-anexo {
+    background: none;
+    border: none;
+    color: #e63946;
+    cursor: pointer;
+    font-size: 12px;
+    padding: 0 2px;
+  }
+  
+  /* Checklist */
+  .checklist-container { margin-top: 15px; border-top: 1px solid #eee; padding-top: 15px; }
+  .checklist-title { font-weight: bold; margin-bottom: 10px; display: flex; justify-content: space-between; }
+  .progress-bar { height: 6px; background: #e0e0e0; border-radius: 3px; overflow: hidden; margin: 10px 0; }
+  .progress-fill { height: 100%; background: #2ecc71; transition: width 0.3s; }
+  .checklist-item { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
+  .checklist-item input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
+  .checklist-item label { flex: 1; cursor: pointer; font-size: 13px; }
+  .checklist-item.completed label { text-decoration: line-through; color: #999; }
+  .add-task { display: flex; gap: 8px; margin-top: 10px; }
+  .add-task input { flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 6px; }
+  
+  /* Modal */
+  .modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+  }
+  .modal.active { display: flex; }
+  .modal-content {
+    background: white;
+    padding: 25px;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 600px;
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+  .modal-content h3 { margin-bottom: 20px; }
+  .modal-content input, .modal-content select, .modal-content textarea {
+    width: 100%;
+    padding: 10px;
+    margin: 8px 0;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+  }
+  .modal-content input[type="file"] { padding: 5px; }
+  .modal-buttons { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+  
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .page-header h1 { font-size: 24px; margin-bottom: 5px; }
+  .page-header p { color: #666; }
+  .header-buttons { display: flex; gap: 10px; }
+  
+  .view { display: none; }
+  .view.active { display: block; }
+  
+  .upload-area {
+    border: 2px dashed #ddd;
+    border-radius: 8px;
+    padding: 15px;
+    text-align: center;
+    margin: 10px 0;
+    cursor: pointer;
+  }
+  .upload-area:hover { border-color: #4361ee; }
+  
+  @media (max-width: 768px) {
+    .sidebar { transform: translateX(-100%); transition: 0.3s; z-index: 100; }
+    .sidebar.open { transform: translateX(0); }
+    .main-content { margin-left: 0; }
+    .charts-row { grid-template-columns: 1fr; }
+    .page-header { flex-direction: column; align-items: flex-start; }
+  }
+</style>
+</head>
+<body>
+
+<!-- TELA DE LOGIN -->
+<div id="loginScreen" class="login-container">
+  <div class="login-card">
+    <h2>🔧 S.A Sys</h2>
+    <p>Sistema de Ordens de Serviço</p>
+    <input type="email" id="loginEmail" placeholder="E-mail" value="admin@sys.com">
+    <input type="password" id="loginPassword" placeholder="Senha" value="123">
+    <button onclick="fazerLogin()">Entrar</button>
+    <div id="loginError" class="error-msg"></div>
+    <div class="demo-info">
+      <strong>📋 Credenciais:</strong><br>
+      admin@sys.com / 123 - Acesso total<br>
+      tecnico@sys.com / 123 - Apenas Ordens<br>
+      financeiro@sys.com / 123 - Apenas Financeiro
+    </div>
+  </div>
+</div>
+
+<!-- SISTEMA PRINCIPAL -->
+<div id="app">
+  <div class="sidebar" id="sidebar">
+    <h2>S.A Sys</h2>
+    <nav>
+      <a onclick="navegar('dashboard')" data-page="dashboard">📊 Dashboard</a>
+      <a onclick="navegar('clientes')" data-page="clientes">👥 Clientes</a>
+      <a onclick="navegar('tecnicos')" data-page="tecnicos">🔧 Técnicos</a>
+      <a onclick="navegar('ordens')" data-page="ordens">📋 Ordens</a>
+      <a onclick="navegar('calendario')" data-page="calendario">📅 Calendário</a>
+      <a onclick="navegar('financeiro')" data-page="financeiro">💰 Financeiro</a>
+    </nav>
+    <button class="logout-btn" onclick="fazerLogout()">Sair</button>
+  </div>
+  
+  <div class="main-content">
+    <!-- DASHBOARD -->
+    <div id="view-dashboard" class="view active">
+      <div class="page-header">
+        <div><h1>Dashboard</h1><p>Visão geral do sistema</p></div>
+        <div class="header-buttons">
+          <button onclick="gerarPDFDashboard()" class="secondary">📄 Exportar Dashboard</button>
+        </div>
+      </div>
+      <div class="cards-grid" id="dashCards"></div>
+      <div class="charts-row">
+        <div class="chart-card"><h3>📊 Ordens por Status</h3><canvas id="statusChart"></canvas></div>
+        <div class="chart-card"><h3>💰 Faturamento Mensal</h3><canvas id="revenueChart"></canvas></div>
+      </div>
+    </div>
+    
+    <!-- CLIENTES -->
+    <div id="view-clientes" class="view">
+      <div class="page-header">
+        <div><h1>Clientes</h1><p>Cadastro de clientes</p></div>
+        <div class="header-buttons">
+          <button onclick="gerarPDFClientes()" class="secondary">📄 Exportar PDF</button>
+          <button onclick="abrirModal('cliente')">+ Novo Cliente</button>
+        </div>
+      </div>
+      <div class="table-container" id="clientesTable"></div>
+    </div>
+    
+    <!-- TÉCNICOS -->
+    <div id="view-tecnicos" class="view">
+      <div class="page-header">
+        <div><h1>Técnicos</h1><p>Equipe técnica</p></div>
+        <div class="header-buttons">
+          <button onclick="gerarPDFTecnicos()" class="secondary">📄 Exportar PDF</button>
+          <button onclick="abrirModal('tecnico')">+ Novo Técnico</button>
+        </div>
+      </div>
+      <div class="table-container" id="tecnicosTable"></div>
+    </div>
+    
+    <!-- ORDENS (Lista) -->
+    <div id="view-ordens" class="view">
+      <div class="page-header">
+        <div><h1>Ordens de Serviço</h1><p>Controle das OS</p></div>
+        <div class="header-buttons">
+          <button onclick="gerarPDFOrdens()" class="secondary">📄 Exportar PDF</button>
+          <button onclick="abrirModal('ordem')">+ Nova Ordem</button>
+        </div>
+      </div>
+      <select id="filtroStatus" onchange="renderizarOrdens()" style="margin-bottom: 15px; padding: 8px; border-radius: 6px;">
+        <option value="">Todos os status</option>
+        <option>Pendente</option><option>Em Progresso</option><option>Concluído</option>
+      </select>
+      <div class="table-container" id="ordensTable"></div>
+    </div>
+    
+    <!-- CALENDÁRIO -->
+    <div id="view-calendario" class="view">
+      <div class="page-header">
+        <div><h1>Calendário de Agendamentos</h1><p>Visualize e gerencie as datas das OS</p></div>
+        <div class="header-buttons">
+          <button onclick="abrirModal('ordem')">+ Nova Ordem</button>
+        </div>
+      </div>
+      <div class="calendar-container">
+        <div id="calendar"></div>
+      </div>
+    </div>
+    
+    <!-- FINANCEIRO -->
+    <div id="view-financeiro" class="view">
+      <div class="page-header">
+        <div><h1>Financeiro</h1><p>Receitas e despesas</p></div>
+        <div class="header-buttons">
+          <button onclick="gerarPDFFinanceiro()" class="secondary">📄 Exportar PDF</button>
+          <button onclick="abrirModal('despesa')">+ Nova Despesa</button>
+        </div>
+      </div>
+      <div class="cards-grid" id="finCards"></div>
+      <div class="table-container" id="despesasTable"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL GENÉRICO -->
+<div id="modal" class="modal">
+  <div class="modal-content">
+    <h3 id="modalTitle">Título</h3>
+    <div id="modalBody"></div>
+    <div class="modal-buttons">
+      <button onclick="fecharModal()">Cancelar</button>
+      <button id="modalSalvarBtn" onclick="salvarModal()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// DADOS INICIAIS
+// ============================================================
+let dados = {
+  clientes: [
+    { id: 1, nome: "Ana Lima", telefone: "(11) 99999-1111", email: "ana@email.com", status: "Ativo" },
+    { id: 2, nome: "Carlos Souza", telefone: "(21) 98888-2222", email: "carlos@email.com", status: "Ativo" },
+    { id: 3, nome: "Fernanda Costa", telefone: "(31) 97777-3333", email: "fernanda@email.com", status: "Ativo" }
+  ],
+  tecnicos: [
+    { id: 1, nome: "João Silva", especialidade: "Elétrica", telefone: "(11) 96666-4444", status: "Disponível" },
+    { id: 2, nome: "Marcos Reis", especialidade: "Hidráulica", telefone: "(21) 95555-5555", status: "Ocupado" }
+  ],
+  ordens: [
+    { id: 1, clienteId: 1, tecnicoId: 1, descricao: "Instalação elétrica", status: "Concluído", valor: 850, data: "2025-01-10", pagamento: "Pago", anexos: [], checklist: [{ id: 1, descricao: "Desligar energia", concluida: true }, { id: 2, descricao: "Instalar quadro", concluida: true }] },
+    { id: 2, clienteId: 2, tecnicoId: 2, descricao: "Reparo hidráulico", status: "Em Progresso", valor: 320, data: "2025-02-15", pagamento: "Pendente", anexos: [], checklist: [{ id: 1, descricao: "Identificar vazamento", concluida: true }, { id: 2, descricao: "Substituir cano", concluida: false }] },
+    { id: 3, clienteId: 3, tecnicoId: 1, descricao: "Manutenção ar condicionado", status: "Pendente", valor: 1200, data: "2025-03-05", pagamento: "Pendente", anexos: [], checklist: [{ id: 1, descricao: "Limpar filtros", concluida: false }, { id: 2, descricao: "Verificar gás", concluida: false }] },
+    { id: 4, clienteId: 1, tecnicoId: 2, descricao: "Troca de fiação", status: "Concluído", valor: 650, data: "2025-02-20", pagamento: "Pago", anexos: [], checklist: [] }
+  ],
+  despesas: [
+    { id: 1, descricao: "Aluguel", categoria: "Fixo", valor: 1800, data: "2025-01-05", status: "Pago" },
+    { id: 2, descricao: "Material elétrico", categoria: "Material", valor: 450, data: "2025-02-10", status: "Pago" }
+  ]
+};
+
+let nextIds = { cliente: 10, tecnico: 10, ordem: 20, despesa: 10, checklist: 10 };
+let usuarioAtual = null;
+let modalTipo = null;
+let modalEditId = null;
+let anexosTemp = [];
+let checklistTemp = [];
+let calendar = null;
+
+// Gráficos
+let statusChart = null;
+let revenueChart = null;
+
+// Permissões
+const permissoes = {
+  admin: ["dashboard", "clientes", "tecnicos", "ordens", "calendario", "financeiro"],
+  tecnico: ["dashboard", "ordens", "calendario"],
+  financeiro: ["dashboard", "financeiro"]
+};
+
+// ============================================================
+// AUTENTICAÇÃO
+// ============================================================
+function fazerLogin() {
+  const email = document.getElementById("loginEmail").value.trim();
+  const senha = document.getElementById("loginPassword").value;
+  const usuarios = {
+    "admin@sys.com": { id: 1, nome: "Admin", perfil: "admin", senha: "123" },
+    "tecnico@sys.com": { id: 2, nome: "João Técnico", perfil: "tecnico", senha: "123" },
+    "financeiro@sys.com": { id: 3, nome: "Maria Financeiro", perfil: "financeiro", senha: "123" }
+  };
+  const user = usuarios[email];
+  if (user && user.senha === senha) {
+    usuarioAtual = { id: user.id, nome: user.nome, perfil: user.perfil };
+    sessionStorage.setItem("usuario", JSON.stringify(usuarioAtual));
+    document.getElementById("loginScreen").style.display = "none";
+    document.getElementById("app").style.display = "block";
+    inicializarSistema();
+  } else {
+    document.getElementById("loginError").innerText = "E-mail ou senha incorretos";
+  }
+}
+
+function fazerLogout() {
+  sessionStorage.removeItem("usuario");
+  location.reload();
+}
+
+function verificarLogin() {
+  const saved = sessionStorage.getItem("usuario");
+  if (saved) {
+    usuarioAtual = JSON.parse(saved);
+    document.getElementById("loginScreen").style.display = "none";
+    document.getElementById("app").style.display = "block";
+    inicializarSistema();
+  }
+}
+
+function temPermissao(pagina) {
+  return permissoes[usuarioAtual.perfil].includes(pagina);
+}
+
+// ============================================================
+// CALENDÁRIO
+// ============================================================
+function getEventColor(status) {
+  const colors = {
+    "Pendente": "#f39c12",
+    "Em Progresso": "#3498db",
+    "Concluído": "#2ecc71",
+    "Cancelado": "#e74c3c"
+  };
+  return colors[status] || "#95a5a6";
+}
+
+function carregarCalendario() {
+  const calendarEl = document.getElementById('calendar');
+  if (!calendarEl) return;
+  
+  const events = dados.ordens.map(o => {
+    const cliente = dados.clientes.find(c => c.id === o.clienteId);
+    return {
+      id: o.id,
+      title: `#${o.id} - ${cliente?.nome || 'Cliente'} - ${o.descricao.substring(0, 30)}`,
+      start: o.data,
+      backgroundColor: getEventColor(o.status),
+      borderColor: getEventColor(o.status),
+      extendedProps: { ordem: o }
+    };
+  });
+  
+  if (calendar) {
+    calendar.destroy();
+  }
+  
+  calendar = new FullCalendar.Calendar(calendarEl, {
+    initialView: 'dayGridMonth',
+    locale: 'pt-br',
+    headerToolbar: {
+      left: 'prev,next today',
+      center: 'title',
+      right: 'dayGridMonth,dayGridWeek'
+    },
+    events: events,
+    eventClick: function(info) {
+      const ordemId = info.event.id;
+      editarOrdem(parseInt(ordemId));
+    },
+    eventDrop: function(info) {
+      const ordemId = parseInt(info.event.id);
+      const novaData = info.event.startStr;
+      const ordem = dados.ordens.find(o => o.id === ordemId);
+      if (ordem) {
+        ordem.data = novaData;
+        salvarDados();
+        renderizarOrdens();
+        if (document.getElementById("view-dashboard").classList.contains("active")) atualizarGraficos();
+      }
+    },
+    eventDragStart: function(info) {
+      info.event.setProp('backgroundColor', '#95a5a6');
+    },
+    eventDragStop: function(info) {
+      info.event.setProp('backgroundColor', getEventColor(info.event.extendedProps.ordem?.status));
+    },
+    editable: usuarioAtual.perfil === 'admin',
+    droppable: false,
+    displayEventTime: false,
+    eventDisplay: 'block'
+  });
+  
+  calendar.render();
+}
+
+// ============================================================
+// FUNÇÕES DE CHECKLIST
+// ============================================================
+function adicionarTarefaTemp() {
+  const input = document.getElementById("nova-tarefa");
+  const descricao = input.value.trim();
+  if (!descricao) return;
+  checklistTemp.push({ id: Date.now(), descricao, concluida: false });
+  input.value = "";
+  renderizarChecklistTemp();
+}
+
+function removerTarefaTemp(index) {
+  checklistTemp.splice(index, 1);
+  renderizarChecklistTemp();
+}
+
+function toggleTarefaTemp(index) {
+  checklistTemp[index].concluida = !checklistTemp[index].concluida;
+  renderizarChecklistTemp();
+}
+
+function renderizarChecklistTemp() {
+  const container = document.getElementById("checklist-temp");
+  if (!container) return;
+  const concluidas = checklistTemp.filter(t => t.concluida).length;
+  const total = checklistTemp.length;
+  const percentual = total > 0 ? (concluidas / total) * 100 : 0;
+  
+  if (total === 0) {
+    container.innerHTML = '<div style="color:#999; font-size:12px; text-align:center;">Nenhuma tarefa adicionada</div>';
+    return;
+  }
+  
+  container.innerHTML = `
+    <div class="progress-bar"><div class="progress-fill" style="width: ${percentual}%"></div></div>
+    ${checklistTemp.map((t, i) => `
+      <div class="checklist-item ${t.concluida ? 'completed' : ''}">
+        <input type="checkbox" ${t.concluida ? 'checked' : ''} onchange="toggleTarefaTemp(${i})">
+        <label onclick="toggleTarefaTemp(${i})">${t.descricao}</label>
+        <button type="button" class="remove-anexo" onclick="removerTarefaTemp(${i})">🗑️</button>
+      </div>
+    `).join('')}
+    <div class="add-task">
+      <input type="text" id="nova-tarefa" placeholder="Nova tarefa...">
+      <button type="button" onclick="adicionarTarefaTemp()">+ Adicionar</button>
+    </div>
+  `;
+}
+
+function renderizarChecklistExistente(checklist, ordemId) {
+  if (!checklist || checklist.length === 0) return '—';
+  const concluidas = checklist.filter(t => t.concluida).length;
+  const total = checklist.length;
+  const percentual = total > 0 ? (concluidas / total) * 100 : 0;
+  return `
+    <div style="min-width: 150px;">
+      <div class="progress-bar" style="width: 100%;"><div class="progress-fill" style="width: ${percentual}%"></div></div>
+      <div style="font-size: 11px; text-align: center;">${concluidas}/${total} concluídas</div>
+      <div style="font-size: 10px; color: #666; margin-top: 4px; cursor: pointer;" onclick="editarOrdem(${ordemId})">📋 Ver detalhes</div>
+    </div>
+  `;
+}
+
+// ============================================================
+// FUNÇÕES DE ANEXOS
+// ============================================================
+function adicionarAnexo(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      resolve({ id: Date.now() + Math.random(), nome: file.name, tipo: file.type, tamanho: file.size, data: e.target.result });
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function removerAnexoTemp(index) {
+  anexosTemp.splice(index, 1);
+  renderizarAnexosTemp();
+}
+
+function removerAnexoExistente(ordemId, anexoId) {
+  const ordem = dados.ordens.find(o => o.id === ordemId);
+  if (ordem) {
+    ordem.anexos = ordem.anexos.filter(a => a.id !== anexoId);
+    salvarDados();
+    renderizarOrdens();
+  }
+}
+
+function renderizarAnexosTemp() {
+  const container = document.getElementById("anexos-temp");
+  if (!container) return;
+  if (anexosTemp.length === 0) {
+    container.innerHTML = '<div style="color:#999; font-size:12px;">Nenhum anexo selecionado</div>';
+    return;
+  }
+  container.innerHTML = anexosTemp.map((a, i) => `
+    <div class="anexo-item">
+      📎 ${a.nome} (${(a.tamanho/1024).toFixed(1)} KB)
+      <button type="button" class="remove-anexo" onclick="removerAnexoTemp(${i})">✕</button>
+    </div>
+  `).join('');
+}
+
+function renderizarAnexos(anexos, ordemId) {
+  if (!anexos || anexos.length === 0) return '—';
+  return `
+    <div class="anexos-list">
+      ${anexos.map(a => `
+        <div class="anexo-item">
+          <a href="${a.data}" download="${a.nome}" target="_blank">📎 ${a.nome}</a>
+          ${usuarioAtual.perfil === 'admin' ? `<button type="button" class="remove-anexo" onclick="removerAnexoExistente(${ordemId}, ${a.id})">✕</button>` : ''}
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+// ============================================================
+// FUNÇÕES DE PDF
+// ============================================================
+const { jsPDF } = window.jspdf;
+
+async function gerarPDFDashboard() {
+  const element = document.querySelector('#view-dashboard .cards-grid').cloneNode(true);
+  const charts = document.querySelector('.charts-row').cloneNode(true);
+  const container = document.createElement('div');
+  container.style.padding = '20px';
+  container.style.fontFamily = 'Nunito, sans-serif';
+  container.innerHTML = `<h1 style="color: #4361ee;">S.A Sys - Dashboard</h1><p>Gerado em: ${new Date().toLocaleString()}</p><hr/>${element.outerHTML}<br/>${charts.outerHTML}`;
+  document.body.appendChild(container);
+  const canvas = await html2canvas(container, { scale: 2 });
+  const imgData = canvas.toDataURL('image/png');
+  const pdf = new jsPDF('p', 'mm', 'a4');
+  const imgWidth = 190;
+  const imgHeight = (canvas.height * imgWidth) / canvas.width;
+  pdf.addImage(imgData, 'PNG', 10, 10, imgWidth, imgHeight);
+  pdf.save('dashboard_sasys.pdf');
+  document.body.removeChild(container);
+}
+
+function gerarPDFClientes() {
+  const pdf = new jsPDF('p', 'mm', 'a4');
+  pdf.setFontSize(18);
+  pdf.text('S.A Sys - Relatório de Clientes', 14, 20);
+  pdf.setFontSize(10);
+  pdf.text(`Gerado em: ${new Date().toLocaleString()}`, 14, 30);
+  const headers = [['ID', 'Nome', 'Telefone', 'Email', 'Status']];
+  const rows = dados.clientes.map(c => [c.id, c.nome, c.telefone || '—', c.email || '—', c.status]);
+  pdf.autoTable({ head: headers, body: rows, startY: 40, theme: 'striped', headStyles: { fillColor: [67, 97, 238] } });
+  pdf.save('clientes_sasys.pdf');
+}
+
+function gerarPDFTecnicos() {
+  const pdf = new jsPDF('p', 'mm', 'a4');
+  pdf.setFontSize(18);
+  pdf.text('S.A Sys - Relatório de Técnicos', 14, 20);
+  pdf.setFontSize(10);
+  pdf.text(`Gerado em: ${new Date().toLocaleString()}`, 14, 30);
+  const headers = [['ID', 'Nome', 'Especialidade', 'Telefone', 'Status']];
+  const rows = dados.tecnicos.map(t => [t.id, t.nome, t.especialidade || '—', t.telefone || '—', t.status]);
+  pdf.autoTable({ head: headers, body: rows, startY: 40, theme: 'striped', headStyles: { fillColor: [67, 97, 238] } });
+  pdf.save('tecnicos_sasys.pdf');
+}
+
+function gerarPDFOrdens() {
+  const pdf = new jsPDF('p', 'mm', 'a4');
+  pdf.setFontSize(18);
+  pdf.text('S.A Sys - Relatório de Ordens de Serviço', 14, 20);
+  pdf.setFontSize(10);
+  pdf.text(`Gerado em: ${new Date().toLocaleString()}`, 14, 30);
+  const headers = [['ID', 'Cliente', 'Técnico', 'Descrição', 'Status', 'Valor', 'Data']];
+  const rows = dados.ordens.map(o => {
+    const cliente = dados.clientes.find(c => c.id === o.clienteId);
+    const tecnico = dados.tecnicos.find(t => t.id === o.tecnicoId);
+    return [o.id, cliente?.nome || '—', tecnico?.nome || '—', o.descricao, o.status, `R$ ${o.valor}`, o.data];
+  });
+  pdf.autoTable({ head: headers, body: rows, startY: 40, theme: 'striped', headStyles: { fillColor: [67, 97, 238] } });
+  pdf.save('ordens_sasys.pdf');
+}
+
+function gerarPDFFinanceiro() {
+  const pdf = new jsPDF('p', 'mm', 'a4');
+  const receitaTotal = dados.ordens.filter(o => o.pagamento === "Pago").reduce((s, o) => s + o.valor, 0);
+  const despesaTotal = dados.despesas.filter(d => d.status === "Pago").reduce((s, d) => s + d.valor, 0);
+  const saldo = receitaTotal - despesaTotal;
+  pdf.setFontSize(18);
+  pdf.text('S.A Sys - Relatório Financeiro', 14, 20);
+  pdf.setFontSize(10);
+  pdf.text(`Gerado em: ${new Date().toLocaleString()}`, 14, 30);
+  pdf.setFontSize(12);
+  pdf.text(`Receita Total: R$ ${receitaTotal.toFixed(2)}`, 14, 50);
+  pdf.text(`Despesa Total: R$ ${despesaTotal.toFixed(2)}`, 14, 60);
+  pdf.text(`Saldo: R$ ${saldo.toFixed(2)}`, 14, 70);
+  pdf.setFontSize(14);
+  pdf.text('Despesas Detalhadas', 14, 90);
+  const headers = [['Descrição', 'Categoria', 'Valor', 'Data', 'Status']];
+  const rows = dados.despesas.map(d => [d.descricao, d.categoria, `R$ ${d.valor}`, d.data, d.status]);
+  pdf.autoTable({ head: headers, body: rows, startY: 100, theme: 'striped', headStyles: { fillColor: [67, 97, 238] } });
+  pdf.save('financeiro_sasys.pdf');
+}
+
+// ============================================================
+// GRÁFICOS
+// ============================================================
+function atualizarGraficos() {
+  const statusCount = { "Pendente": 0, "Em Progresso": 0, "Concluído": 0 };
+  dados.ordens.forEach(o => { if (statusCount[o.status] !== undefined) statusCount[o.status]++; });
+  const ctx1 = document.getElementById('statusChart').getContext('2d');
+  if (statusChart) statusChart.destroy();
+  statusChart = new Chart(ctx1, {
+    type: 'doughnut',
+    data: { labels: ['Pendente', 'Em Progresso', 'Concluído'], datasets: [{ data: [statusCount.Pendente, statusCount["Em Progresso"], statusCount.Concluído], backgroundColor: ['#f39c12', '#3498db', '#2ecc71'], borderWidth: 0 }] },
+    options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'bottom' } } }
+  });
+  const meses = [], valores = [];
+  const hoje = new Date();
+  for (let i = 5; i >= 0; i--) {
+    const data = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
+    meses.push(data.toLocaleString('pt-BR', { month: 'short' }));
+    const total = dados.ordens.filter(o => o.pagamento === "Pago" && new Date(o.data).getMonth() === data.getMonth() && new Date(o.data).getFullYear() === data.getFullYear()).reduce((s, o) => s + o.valor, 0);
+    valores.push(total);
+  }
+  const ctx2 = document.getElementById('revenueChart').getContext('2d');
+  if (revenueChart) revenueChart.destroy();
+  revenueChart = new Chart(ctx2, {
+    type: 'bar',
+    data: { labels: meses, datasets: [{ label: 'Faturamento (R$)', data: valores, backgroundColor: '#4361ee', borderRadius: 8 }] },
+    options: { responsive: true, maintainAspectRatio: true, scales: { y: { beginAtZero: true, ticks: { callback: v => 'R$ ' + v } } } }
+  });
+}
+
+// ============================================================
+// INICIALIZAÇÃO
+// ============================================================
+function inicializarSistema() {
+  const paginasPermitidas = permissoes[usuarioAtual.perfil];
+  document.querySelectorAll('.sidebar nav a').forEach(link => {
+    const pagina = link.getAttribute('data-page');
+    if (!paginasPermitidas.includes(pagina)) link.style.display = 'none';
+  });
+  const saved = localStorage.getItem("sasys_dados");
+  if (saved) {
+    const parsed = JSON.parse(saved);
+    dados = parsed.dados;
+    nextIds = parsed.nextIds;
+  }
+  navegar('dashboard');
+}
+
+function salvarDados() {
+  localStorage.setItem("sasys_dados", JSON.stringify({ dados, nextIds }));
+  if (calendar && document.getElementById("view-calendario").classList.contains("active")) {
+    carregarCalendario();
+  }
+}
+
+function formatarMoeda(valor) { return "R$ " + valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 }); }
+function formatarData(data) { return data ? data.split('-').reverse().join('/') : '—'; }
+function badgeStatus(status) {
+  const classes = { "Ativo": "badge-success", "Inativo": "badge-danger", "Disponível": "badge-success", "Ocupado": "badge-warning", "Concluído": "badge-success", "Pendente": "badge-warning", "Em Progresso": "badge-info", "Cancelado": "badge-danger", "Pago": "badge-success" };
+  return `<span class="badge ${classes[status] || 'badge-info'}">${status}</span>`;
+}
+
+// ============================================================
+// RENDERIZAÇÕES
+// ============================================================
+function renderizarDashboard() {
+  const totalClientes = dados.clientes.length;
+  const totalTecnicos = dados.tecnicos.length;
+  const ordensPendentes = dados.ordens.filter(o => o.status === "Pendente").length;
+  const receitaTotal = dados.ordens.filter(o => o.pagamento === "Pago").reduce((s, o) => s + o.valor, 0);
+  document.getElementById("dashCards").innerHTML = `
+    <div class="card"><h3>Clientes</h3><div class="value">${totalClientes}</div></div>
+    <div class="card"><h3>Técnicos</h3><div class="value">${totalTecnicos}</div></div>
+    <div class="card"><h3>Ordens Pendentes</h3><div class="value">${ordensPendentes}</div></div>
+    <div class="card"><h3>Receita Total</h3><div class="value">${formatarMoeda(receitaTotal)}</div></div>
+  `;
+  atualizarGraficos();
+}
+
+function renderizarClientes() {
+  const isAdmin = usuarioAtual.perfil === "admin";
+  let html = `<table><thead><tr><th>Nome</th><th>Telefone</th><th>Email</th><th>Status</th>${isAdmin ? '<th>Ações</th>' : ''}</tr></thead><tbody>`;
+  dados.clientes.forEach(c => {
+    html += `<tr>
+      <td>${c.nome}</td>
+      <td>${c.telefone || "—"}</td>
+      <td>${c.email || "—"}</td>
+      <td>${badgeStatus(c.status)}${isAdmin ? `<td><button class="action-btn edit" onclick="editarCliente(${c.id})">✏️</button> <button class="action-btn delete" onclick="excluirCliente(${c.id})">🗑️</button></td>` : ''}
+    </tr>`;
+  });
+  html += `</tbody></table>`;
+  document.getElementById("clientesTable").innerHTML = html;
+}
+
+function renderizarTecnicos() {
+  const isAdmin = usuarioAtual.perfil === "admin";
+  let html = `<table><thead><tr><th>Nome</th><th>Especialidade</th><th>Telefone</th><th>Status</th>${isAdmin ? '<th>Ações</th>' : ''}</tr></thead><tbody>`;
+  dados.tecnicos.forEach(t => {
+    html += `<tr>
+      <td>${t.nome}</td>
+      <td>${t.especialidade || "—"}</td>
+      <td>${t.telefone || "—"}</td>
+      <td>${badgeStatus(t.status)}${isAdmin ? `<td><button class="action-btn edit" onclick="editarTecnico(${t.id})">✏️</button> <button class="action-btn delete" onclick="excluirTecnico(${t.id})">🗑️</button></td>` : ''}
+    </tr>`;
+  });
+  html += `</tbody></tr>`;
+  document.getElementById("tecnicosTable").innerHTML = html;
+}
+
+function renderizarOrdens() {
+  const filtro = document.getElementById("filtroStatus")?.value || "";
+  let lista = filtro ? dados.ordens.filter(o => o.status === filtro) : dados.ordens;
+  const isAdmin = usuarioAtual.perfil === "admin";
+  let html = `<table><thead><tr><th>ID</th><th>Cliente</th><th>Técnico</th><th>Descrição</th><th>Status</th><th>Valor</th><th>Data</th><th>Checklist</th><th>Anexos</th>${isAdmin ? '<th>Ações</th>' : ''}</tr></thead><tbody>`;
+  lista.forEach(o => {
+    const cliente = dados.clientes.find(c => c.id === o.clienteId);
+    const tecnico = dados.tecnicos.find(t => t.id === o.tecnicoId);
+    html += `<tr>
+      <td>#${o.id}</td>
+      <td>${cliente?.nome || "—"}</td>
+      <td>${tecnico?.nome || "—"}</td>
+      <td>${o.descricao}</td>
+      <td>${badgeStatus(o.status)}</td>
+      <td>${formatarMoeda(o.valor)}</td>
+      <td>${formatarData(o.data)}</td>
+      <td>${renderizarChecklistExistente(o.checklist, o.id)}</td>
+      <td>${renderizarAnexos(o.anexos, o.id)}</td>
+      ${isAdmin ? `<td><button class="action-btn edit" onclick="editarOrdem(${o.id})">✏️</button> <button class="action-btn delete" onclick="excluirOrdem(${o.id})">🗑️</button></td>` : ''}
+    </tr>`;
+  });
+  html += `</tbody></table>`;
+  document.getElementById("ordensTable").innerHTML = html;
+}
+
+function renderizarFinanceiro() {
+  const receitaTotal = dados.ordens.filter(o => o.pagamento === "Pago").reduce((s, o) => s + o.valor, 0);
+  const despesaTotal = dados.despesas.filter(d => d.status === "Pago").reduce((s, d) => s + d.valor, 0);
+  const saldo = receitaTotal - despesaTotal;
+  document.getElementById("finCards").innerHTML = `
+    <div class="card"><h3>Receita Total</h3><div class="value">${formatarMoeda(receitaTotal)}</div></div>
+    <div class="card"><h3>Despesa Total</h3><div class="value">${formatarMoeda(despesaTotal)}</div></div>
+    <div class="card"><h3>Saldo</h3><div class="value" style="color: ${saldo >= 0 ? '#2ecc71' : '#e74c3c'}">${formatarMoeda(saldo)}</div></div>
+  `;
+  let html = `<table><thead><tr><th>Descrição</th><th>Categoria</th><th>Valor</th><th>Data</th><th>Status</th><th>Ações</th></tr></thead><tbody>`;
+  dados.despesas.forEach(d => {
+    html += `<tr>
+      <td>${d.descricao}</td>
+      <td>${d.categoria}</td>
+      <td>${formatarMoeda(d.valor)}</td>
+      <td>${formatarData(d.data)}</td>
+      <td>${badgeStatus(d.status)}</td>
+      <td><button class="action-btn edit" onclick="editarDespesa(${d.id})">✏️</button> <button class="action-btn delete" onclick="excluirDespesa(${d.id})">🗑️</button></td>
+    </tr>`;
+  });
+  html += `</tbody></table>`;
+  document.getElementById("despesasTable").innerHTML = html;
+}
+
+// ============================================================
+// CRUD
+// ============================================================
+function editarCliente(id) { const c = dados.clientes.find(c => c.id === id); if(c){ modalEditId = id; abrirModal('cliente', c); } }
+function excluirCliente(id) { if(confirm("Excluir?")){ dados.clientes = dados.clientes.filter(c => c.id !== id); salvarDados(); renderizarClientes(); } }
+function editarTecnico(id) { const t = dados.tecnicos.find(t => t.id === id); if(t){ modalEditId = id; abrirModal('tecnico', t); } }
+function excluirTecnico(id) { if(confirm("Excluir?")){ dados.tecnicos = dados.tecnicos.filter(t => t.id !== id); salvarDados(); renderizarTecnicos(); } }
+function excluirOrdem(id) { if(confirm("Excluir?")){ dados.ordens = dados.ordens.filter(o => o.id !== id); salvarDados(); renderizarOrdens(); if(document.getElementById("view-dashboard").classList.contains("active")) atualizarGraficos(); if(calendar) carregarCalendario(); } }
+function editarDespesa(id) { const d = dados.despesas.find(d => d.id === id); if(d){ modalEditId = id; abrirModal('despesa', d); } }
+function excluirDespesa(id) { if(confirm("Excluir?")){ dados.despesas = dados.despesas.filter(d => d.id !== id); salvarDados(); renderizarFinanceiro(); } }
+
+async function editarOrdem(id) {
+  const o = dados.ordens.find(o => o.id === id);
+  if (!o) return;
+  modalEditId = id;
+  anexosTemp = [];
+  checklistTemp = o.checklist ? [...o.checklist] : [];
+  abrirModal('ordem', o);
+}
+
+// ============================================================
+// MODAL
+// ============================================================
+function abrirModal(tipo, dadosItem = null) {
+  modalTipo = tipo;
+  modalEditId = dadosItem?.id || null;
+  const modal = document.getElementById("modal");
+  const modalTitle = document.getElementById("modalTitle");
+  const modalBody = document.getElementById("modalBody");
+  
+  if (tipo === "cliente") {
+    modalTitle.innerText = dadosItem ? "Editar Cliente" : "Novo Cliente";
+    modalBody.innerHTML = `<input type="text" id="campo1" placeholder="Nome" value="${dadosItem?.nome || ''}"><input type="text" id="campo2" placeholder="Telefone" value="${dadosItem?.telefone || ''}"><input type="email" id="campo3" placeholder="Email" value="${dadosItem?.email || ''}"><select id="campo4"><option ${dadosItem?.status === "Ativo" ? "selected" : ""}>Ativo</option><option ${dadosItem?.status === "Inativo" ? "selected" : ""}>Inativo</option></select>`;
+  } else if (tipo === "tecnico") {
+    modalTitle.innerText = dadosItem ? "Editar Técnico" : "Novo Técnico";
+    modalBody.innerHTML = `<input type="text" id="campo1" placeholder="Nome" value="${dadosItem?.nome || ''}"><input type="text" id="campo2" placeholder="Especialidade" value="${dadosItem?.especialidade || ''}"><input type="text" id="campo3" placeholder="Telefone" value="${dadosItem?.telefone || ''}"><select id="campo4"><option ${dadosItem?.status === "Disponível" ? "selected" : ""}>Disponível</option><option ${dadosItem?.status === "Ocupado" ? "selected" : ""}>Ocupado</option></select>`;
+  } else if (tipo === "ordem") {
+    modalTitle.innerText = dadosItem ? "Editar Ordem" : "Nova Ordem";
+    const clientesOptions = dados.clientes.map(c => `<option value="${c.id}" ${dadosItem?.clienteId === c.id ? "selected" : ""}>${c.nome}</option>`).join("");
+    const tecnicosOptions = dados.tecnicos.map(t => `<option value="${t.id}" ${dadosItem?.tecnicoId === t.id ? "selected" : ""}>${t.nome}</option>`).join("");
+    modalBody.innerHTML = `
+      <select id="campo1">${clientesOptions}</select>
+      <select id="campo2">${tecnicosOptions}</select>
+      <textarea id="campo3" placeholder="Descrição">${dadosItem?.descricao || ''}</textarea>
+      <select id="campo4"><option ${dadosItem?.status === "Pendente" ? "selected" : ""}>Pendente</option><option ${dadosItem?.status === "Em Progresso" ? "selected" : ""}>Em Progresso</option><option ${dadosItem?.status === "Concluído" ? "selected" : ""}>Concluído</option></select>
+      <input type="number" id="campo5" placeholder="Valor" value="${dadosItem?.valor || ''}">
+      <input type="date" id="campo6" value="${dadosItem?.data || new Date().toISOString().split('T')[0]}">
+      <select id="campo7"><option ${dadosItem?.pagamento === "Pendente" ? "selected" : ""}>Pendente</option><option ${dadosItem?.pagamento === "Pago" ? "selected" : ""}>Pago</option></select>
+      
+      <div class="checklist-container">
+        <div class="checklist-title">📋 Checklist de Tarefas</div>
+        <div id="checklist-temp"></div>
+      </div>
+      
+      <div style="margin: 15px 0;">
+        <label style="font-weight: bold;">📎 Anexos (fotos, PDFs)</label>
+        <div class="upload-area" onclick="document.getElementById('fileInput').click()">Clique para selecionar arquivos</div>
+        <input type="file" id="fileInput" multiple accept="image/*,application/pdf" style="display:none" onchange="processarArquivos(this)">
+        <div id="anexos-temp" style="margin-top: 10px;"></div>
+        ${dadosItem?.anexos && dadosItem.anexos.length > 0 ? `<div style="margin-top: 10px;"><label style="font-weight: bold;">Anexos atuais:</label><div style="margin-top: 5px;">${dadosItem.anexos.map(a => `<div class="anexo-item">📎 ${a.nome}</div>`).join('')}</div></div>` : ''}
+      </div>
+    `;
+    anexosTemp = [];
+    renderizarAnexosTemp();
+    renderizarChecklistTemp();
+  } else if (tipo === "despesa") {
+    modalTitle.innerText = dadosItem ? "Editar Despesa" : "Nova Despesa";
+    modalBody.innerHTML = `<input type="text" id="campo1" placeholder="Descrição" value="${dadosItem?.descricao || ''}"><select id="campo2"><option ${dadosItem?.categoria === "Fixo" ? "selected" : ""}>Fixo</option><option ${dadosItem?.categoria === "Material" ? "selected" : ""}>Material</option><option ${dadosItem?.categoria === "Pessoal" ? "selected" : ""}>Pessoal</option></select><input type="number" id="campo3" placeholder="Valor" value="${dadosItem?.valor || ''}"><input type="date" id="campo4" value="${dadosItem?.data || new Date().toISOString().split('T')[0]}"><select id="campo5"><option ${dadosItem?.status === "Pendente" ? "selected" : ""}>Pendente</option><option ${dadosItem?.status === "Pago" ? "selected" : ""}>Pago</option></select>`;
+  }
+  modal.classList.add("active");
+}
+
+async function processarArquivos(input) {
+  const files = Array.from(input.files);
+  for (const file of files) {
+    const anexo = await adicionarAnexo(file);
+    anexosTemp.push(anexo);
+  }
+  renderizarAnexosTemp();
+  input.value = '';
+}
+
+async function salvarModal() {
+  if (modalTipo === "cliente") {
+    const novo = { id: modalEditId || nextIds.cliente++, nome: document.getElementById("campo1").value, telefone: document.getElementById("campo2").value, email: document.getElementById("campo3").value, status: document.getElementById("campo4").value };
+    if (modalEditId) { const index = dados.clientes.findIndex(c => c.id === modalEditId); dados.clientes[index] = novo; }
+    else dados.clientes.push(novo);
+    renderizarClientes();
+  } else if (modalTipo === "tecnico") {
+    const novo = { id: modalEditId || nextIds.tecnico++, nome: document.getElementById("campo1").value, especialidade: document.getElementById("campo2").value, telefone: document.getElementById("campo3").value, status: document.getElementById("campo4").value };
+    if (modalEditId) { const index = dados.tecnicos.findIndex(t => t.id === modalEditId); dados.tecnicos[index] = novo; }
+    else dados.tecnicos.push(novo);
+    renderizarTecnicos();
+  } else if (modalTipo === "ordem") {
+    const ordemExistente = modalEditId ? dados.ordens.find(o => o.id === modalEditId) : null;
+    const anexosExistentes = ordemExistente?.anexos || [];
+    const todosAnexos = [...anexosExistentes, ...anexosTemp];
+    const novo = {
+      id: modalEditId || nextIds.ordem++,
+      clienteId: parseInt(document.getElementById("campo1").value),
+      tecnicoId: parseInt(document.getElementById("campo2").value),
+      descricao: document.getElementById("campo3").value,
+      status: document.getElementById("campo4").value,
+      valor: parseFloat(document.getElementById("campo5").value) || 0,
+      data: document.getElementById("campo6").value,
+      pagamento: document.getElementById("campo7").value,
+      anexos: todosAnexos,
+      checklist: checklistTemp
+    };
+    if (modalEditId) { const index = dados.ordens.findIndex(o => o.id === modalEditId); dados.ordens[index] = novo; }
+    else dados.ordens.push(novo);
+    renderizarOrdens();
+    if (calendar) carregarCalendario();
+  } else if (modalTipo === "despesa") {
+    const novo = { id: modalEditId || nextIds.despesa++, descricao: document.getElementById("campo1").value, categoria: document.getElementById("campo2").value, valor: parseFloat(document.getElementById("campo3").value) || 0, data: document.getElementById("campo4").value, status: document.getElementById("campo5").value };
+    if (modalEditId) { const index = dados.despesas.findIndex(d => d.id === modalEditId); dados.despesas[index] = novo; }
+    else dados.despesas.push(novo);
+    renderizarFinanceiro();
+  }
+  salvarDados();
+  fecharModal();
+  if (document.getElementById("view-dashboard").classList.contains("active")) atualizarGraficos();
+}
+
+function fecharModal() {
+  document.getElementById("modal").classList.remove("active");
+  modalTipo = null;
+  modalEditId = null;
+  anexosTemp = [];
+  checklistTemp = [];
+}
+
+// ============================================================
+// NAVEGAÇÃO
+// ============================================================
+function navegar(pagina) {
+  if (!temPermissao(pagina)) { alert("Acesso negado"); return; }
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById(`view-${pagina}`).classList.add('active');
+  document.querySelectorAll('.sidebar nav a').forEach(a => a.classList.remove('active'));
+  document.querySelector(`.sidebar nav a[data-page="${pagina}"]`).classList.add('active');
+  const renders = { dashboard: renderizarDashboard, clientes: renderizarClientes, tecnicos: renderizarTecnicos, ordens: renderizarOrdens, financeiro: renderizarFinanceiro, calendario: carregarCalendario };
+  if (renders[pagina]) renders[pagina]();
+}
+
+// ============================================================
+// INICIAR
+// ============================================================
+verificarLogin();
+</script>
+</body>
+</html>
